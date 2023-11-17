@@ -153,38 +153,26 @@ async function runPF2eSpells(data) {
     const playOnDamage = data.playOnDamage;
     const isDamageRoll = msg.isDamageRoll;
     const hasAttack = spellHasAttack(item);
-    const spellType = getSpellType(item);
+	const hasDamage = itemHasDamage(item);
 
     if (item.isVariant) {
         data.isVariant = true
         data.originalItem = item.original;
     }
-
-    switch (spellType) {
-        case "utility":
-        case "save":
-            if (spellHasAOE(item)) { return; }
-            if (itemHasDamage(item) && msg.isDamageRoll) {
-                playPF2e(data)
-            } else if (!itemHasDamage(item)) {
-                playPF2e(data)
-            }
-            break;
-        case "attack":
-            if (!msg.isRoll) { return; }
-            if (playOnDamage && msg.isDamageRoll) {
-                playPF2e(data);
-            } else if (!playOnDamage && !msg.isDamageRoll) {
-                playPF2e(data);
-            } else if (!itemHasDamage(item) && !msg.isDamageRoll) {
-                playPF2e(data);
-            }
-            break;
-        case "heal":
-            if (msg.isDamageRoll) {
-                playPF2e(data);
-            }
-            break;
+    
+    if (hasAttack) {
+        if (!msg.isRoll) { return; }
+        if (playOnDamage && msg.isDamageRoll) {
+            playPF2e(data);
+        } else if (!playOnDamage && !msg.isDamageRoll) {
+            playPF2e(data);
+        } else if (!hasDamage && !msg.isDamageRoll) {
+            playPF2e(data);
+        }
+    } else {
+        if (spellHasAOE(item)) { return; }
+        if (!hasDamage || msg.isDamageRoll)
+            playPF2e(data);
     }
 }
 async function playPF2e(input) {
@@ -223,7 +211,7 @@ function getSpellType(item) {
     return item.system.spellType?.value;
 }
 function spellHasAttack(item) {
-    return getSpellType(item) === "attack"
+    return item.system.defense?.passive?.statistic === "ac";
 }
 function spellHasAOE(item) {
     return item.system.area?.value && item.system.area?.type;
@@ -252,7 +240,7 @@ function findDamageOnItem(item) {
 }
 
 function itemHasDamage(item) {
-    let damage = item.system?.damage?.value || item.system?.damageRolls || {};
+    let damage = item.system?.damage || item.system?.damageRolls || {};
     return Object.keys(damage).length
 }
 
